@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Expense Tracker{% endblock %}</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    :root {
+      --bg:       #070711;
+      --surface:  #0f0f1a;
+      --card:     #13131f;
+      --border:   rgba(255,255,255,0.07);
+      --purple:   #8b5cf6;
+      --violet:   #7c3aed;
+      --pink:     #ec4899;
+      --cyan:     #06b6d4;
+      --amber:    #f59e0b;
+      --green:    #10b981;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg);
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+
+    /* ── Ambient background blobs ── */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -20%;
+      left: -10%;
+      width: 60vw;
+      height: 60vw;
+      background: radial-gradient(circle, rgba(124,58,237,0.12) 0%, transparent 65%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      bottom: -20%;
+      right: -10%;
+      width: 55vw;
+      height: 55vw;
+      background: radial-gradient(circle, rgba(236,72,153,0.09) 0%, transparent 65%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Layout wrapper ── */
+    .page { position: relative; z-index: 1; display: flex; flex-direction: column; min-height: 100vh; }
+
+    /* ── Header ── */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(7,7,17,0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+    .header-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 2rem;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+    .logo-icon {
+      width: 38px; height: 38px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--violet), var(--pink));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 4px 20px rgba(124,58,237,0.45);
+      flex-shrink: 0;
+    }
+    .logo-text {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 1.15rem;
+      background: linear-gradient(90deg, #a78bfa, #ec4899);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.02em;
+    }
+    .export-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 18px;
+      border-radius: 10px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #94a3b8;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .export-btn:hover { background: rgba(255,255,255,0.09); color: #e2e8f0; border-color: rgba(255,255,255,0.15); }
+
+    /* ── Main ── */
+    .main {
+      flex: 1;
+      max-width: 1280px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 2rem 2rem 4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.75rem;
+    }
+
+    /* ── Flash ── */
+    .flash-success { border: 1px solid rgba(16,185,129,0.35); background: rgba(16,185,129,0.08); color: #6ee7b7; border-radius: 14px; padding: 12px 18px; font-size: 0.875rem; display: flex; align-items: center; gap: 10px; }
+    .flash-error   { border: 1px solid rgba(239,68,68,0.35);  background: rgba(239,68,68,0.08);  color: #fca5a5; border-radius: 14px; padding: 12px 18px; font-size: 0.875rem; display: flex; align-items: center; gap: 10px; }
+    .flash-info    { border: 1px solid var(--border); background: rgba(255,255,255,0.04); color: #94a3b8; border-radius: 14px; padding: 12px 18px; font-size: 0.875rem; display: flex; align-items: center; gap: 10px; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      transition: border-color 0.25s;
+    }
+    .card:hover { border-color: rgba(139,92,246,0.22); }
+    .card-pad { padding: 1.5rem; }
+
+    /* ── Stat cards ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+    }
+    @media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) { .stats-grid { grid-template-columns: 1fr 1fr; } }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: border-color 0.25s, transform 0.2s;
+    }
+    .stat-card:hover { border-color: rgba(139,92,246,0.25); transform: translateY(-2px); }
+    .stat-label {
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #475569;
+    }
+    .stat-value {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.03em;
+    }
+    .stat-value.purple { background: linear-gradient(135deg, #a78bfa, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .stat-value.amber  { color: #f59e0b; }
+    .stat-value.cyan   { color: #06b6d4; }
+    .stat-value.green  { color: #10b981; }
+
+    /* ── Two-col grid ── */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 1.25rem;
+    }
+    @media (max-width: 1024px) { .two-col { grid-template-columns: 1fr; } }
+
+    /* ── Section heading ── */
+    .sec-heading {
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 1.1rem;
+    }
+    .sec-bar {
+      width: 4px; height: 18px;
+      border-radius: 99px;
+      flex-shrink: 0;
+    }
+
+    /* ── Form elements ── */
+    .field-label {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #64748b;
+      margin-bottom: 6px;
+    }
+    .inp {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 11px;
+      padding: 10px 14px;
+      color: #e2e8f0;
+      font-size: 0.875rem;
+      font-family: 'Space Grotesk', sans-serif;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      -webkit-appearance: none;
+    }
+    .inp:focus { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(139,92,246,0.18); }
+    .inp::placeholder { color: #334155; }
+    input[type="date"].inp::-webkit-calendar-picker-indicator { filter: invert(0.4) sepia(1) saturate(2) hue-rotate(230deg); cursor: pointer; }
+    select.inp {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238b5cf6' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 36px;
+    }
+    select.inp option { background: #13131f; color: #e2e8f0; }
+
+    .filter-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr auto;
+      gap: 12px;
+      align-items: end;
+    }
+    @media (max-width: 700px) { .filter-grid { grid-template-columns: 1fr 1fr; } }
+
+    .btn-row { display: flex; gap: 8px; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #7c3aed, #a855f7);
+      color: #fff;
+      border: none;
+      border-radius: 11px;
+      padding: 10px 22px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 4px 18px rgba(124,58,237,0.4);
+      white-space: nowrap;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 22px rgba(124,58,237,0.55); }
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-ghost {
+      background: rgba(255,255,255,0.05);
+      color: #64748b;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 11px;
+      padding: 10px 18px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      display: inline-block;
+      white-space: nowrap;
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,0.09); color: #94a3b8; }
+
+    .total-bar {
+      margin-top: 1.1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .total-label { font-size: 0.8rem; color: #475569; }
+    .total-value {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 1.1rem;
+      background: linear-gradient(90deg, #a78bfa, #ec4899);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .add-form { display: flex; flex-direction: column; gap: 14px; }
+    .add-form .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* ── Table ── */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    thead tr { border-bottom: 1px solid var(--border); }
+    thead th {
+      text-align: left;
+      padding: 12px 20px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #334155;
+    }
+    thead th.right { text-align: right; }
+    tbody tr {
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      transition: background 0.15s;
+    }
+    tbody tr:hover { background: rgba(139,92,246,0.05); }
+    tbody td { padding: 13px 20px; color: #94a3b8; vertical-align: middle; }
+    tbody td.desc { color: #e2e8f0; font-weight: 500; }
+    tbody td.amount {
+      text-align: right;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      background: linear-gradient(90deg, #a78bfa, #ec4899);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    tbody td.action { text-align: right; }
+    .date-cell { font-size: 0.78rem; font-weight: 500; color: #475569; }
+
+    /* Category pills */
+    .pill {
+      display: inline-block;
+      padding: 3px 12px;
+      border-radius: 99px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+    .pill-Food        { background: rgba(245,158,11,0.12);  color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+    .pill-Transport   { background: rgba(6,182,212,0.12);   color: #22d3ee; border: 1px solid rgba(6,182,212,0.25); }
+    .pill-Rent        { background: rgba(139,92,246,0.12);  color: #a78bfa; border: 1px solid rgba(139,92,246,0.25); }
+    .pill-Utilities   { background: rgba(16,185,129,0.12);  color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
+    .pill-Health      { background: rgba(236,72,153,0.12);  color: #f472b6; border: 1px solid rgba(236,72,153,0.25); }
+    .pill-Entertainment { background: rgba(99,102,241,0.12); color: #818cf8; border: 1px solid rgba(99,102,241,0.25); }
+    .pill-Shopping    { background: rgba(251,146,60,0.12);  color: #fb923c; border: 1px solid rgba(251,146,60,0.25); }
+    .pill-Other       { background: rgba(100,116,139,0.12); color: #94a3b8; border: 1px solid rgba(100,116,139,0.25); }
+
+    .del-btn {
+      background: transparent;
+      border: 1px solid rgba(239,68,68,0.2);
+      color: rgba(248,113,113,0.6);
+      border-radius: 8px;
+      padding: 5px 12px;
+      font-size: 0.75rem;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .del-btn:hover { background: rgba(239,68,68,0.1); color: #f87171; border-color: rgba(239,68,68,0.4); }
+
+    .empty-state {
+      padding: 4rem 2rem;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .empty-icon { font-size: 3rem; opacity: 0.4; }
+    .empty-text { font-size: 0.875rem; color: #334155; }
+
+    /* ── Charts ── */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+    }
+    @media (max-width: 768px) { .charts-grid { grid-template-columns: 1fr; } }
+
+    /* ── Table header row ── */
+    .table-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .record-badge {
+      font-size: 0.75rem;
+      color: #475569;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      padding: 4px 12px;
+      border-radius: 99px;
+    }
+
+    /* ── Animations ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { animation: fadeUp 0.45s ease both; }
+    .delay-1 { animation-delay: 0.05s; }
+    .delay-2 { animation-delay: 0.1s; }
+    .delay-3 { animation-delay: 0.15s; }
+    .delay-4 { animation-delay: 0.2s; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.3); border-radius: 99px; }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <!-- ── Header ── -->
+  <header class="header">
+    <div class="header-inner">
+      <a href="{{ url_for('index') }}" class="logo">
+        <div class="logo-icon">💸</div>
+        <span class="logo-text">Expense Tracker</span>
+      </a>
+      <a href="{{ url_for('export', start=start_str, end=end_str, category=selected_category) }}"
+         class="export-btn">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Export CSV
+      </a>
+    </div>
+  </header>
+
+  <!-- ── Main ── -->
+  <main class="main">
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          {% for category, message in messages %}
+            <div class="flash-{{ category if category in ['success','error'] else 'info' }}">
+              {% if category == 'success' %}✅{% elif category == 'error' %}❌{% else %}ℹ️{% endif %}
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Stats -->
+    <div class="stats-grid fade-up">
+      <div class="stat-card" style="border-color:rgba(139,92,246,0.18);box-shadow:0 0 28px rgba(139,92,246,0.08);">
+        <span class="stat-label">Total Spent</span>
+        <span class="stat-value purple">${{ '%.2f'|format(total or 0) }}</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Entries</span>
+        <span class="stat-value" style="color:#e2e8f0;">{{ expenses|length }}</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Avg / Entry</span>
+        <span class="stat-value amber">
+          ${% if expenses|length > 0 %}{{ '%.2f'|format((total or 0) / (expenses|length)) }}{% else %}0.00{% endif %}
+        </span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Active Filter</span>
+        <span class="stat-value cyan" style="font-size:1.1rem;margin-top:4px;">
+          {{ selected_category if selected_category else "All" }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Filters + Add Expense -->
+    <div class="two-col fade-up delay-1">
+
+      <!-- Filters -->
+      <div class="card card-pad">
+        <div class="sec-heading">
+          <span class="sec-bar" style="background:linear-gradient(180deg,#a78bfa,#ec4899);"></span>
+          Filter Expenses
+        </div>
+        <form method="get" action="{{ url_for('index') }}">
+          <div class="filter-grid">
+            <div>
+              <span class="field-label">Start Date</span>
+              <input type="date" name="start" value="{{ start_str }}" class="inp" />
+            </div>
+            <div>
+              <span class="field-label">End Date</span>
+              <input type="date" name="end" value="{{ end_str }}" class="inp" />
+            </div>
+            <div>
+              <span class="field-label">Category</span>
+              <select name="category" class="inp">
+                <option value="">All Categories</option>
+                {% for c in categories %}
+                  <option value="{{ c }}" {% if selected_category == c %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="btn-row">
+              <button type="submit" class="btn-primary">Apply</button>
+              <a href="{{ url_for('index') }}" class="btn-ghost">Reset</a>
+            </div>
+          </div>
+        </form>
+        <div class="total-bar">
+          <span class="total-label">Filtered total:</span>
+          <span class="total-value">${{ '%.2f'|format(total or 0) }}</span>
+          <a href="{{ url_for('export', start=start_str, end=end_str, category=selected_category) }}"
+             style="margin-left:auto;font-size:0.75rem;color:#475569;text-decoration:underline;transition:color 0.2s;"
+             onmouseover="this.style.color='#a78bfa'" onmouseout="this.style.color='#475569'">
+            ⬇ Export current view
+          </a>
+        </div>
+      </div>
+
+      <!-- Add Expense -->
+      <div class="card card-pad">
+        <div class="sec-heading">
+          <span class="sec-bar" style="background:linear-gradient(180deg,#ec4899,#f97316);"></span>
+          Add Expense
+        </div>
+        <form method="post" action="{{ url_for('add') }}" class="add-form">
+          <div>
+            <span class="field-label">Description</span>
+            <input name="description" placeholder="e.g., Groceries" class="inp" required />
+          </div>
+          <div class="grid-2">
+            <div>
+              <span class="field-label">Amount ($)</span>
+              <input name="amount" type="number" step="0.01" min="0.01" placeholder="0.00" class="inp" required />
+            </div>
+            <div>
+              <span class="field-label">Date</span>
+              <input name="date" type="date" class="inp" />
+            </div>
+          </div>
+          <div>
+            <span class="field-label">Category</span>
+            <select name="category" class="inp">
+              {% for c in categories %}
+                <option value="{{ c }}">{{ c }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn-primary" style="width:100%;padding:12px;">
+            + Add Expense
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Expenses Table -->
+    <div class="card fade-up delay-2" style="overflow:hidden;">
+      <div class="table-header">
+        <div class="sec-heading" style="margin-bottom:0;">
+          <span class="sec-bar" style="background:linear-gradient(180deg,#06b6d4,#8b5cf6);"></span>
+          Expenses
+        </div>
+        <span class="record-badge">{{ expenses|length }} record{{ 's' if expenses|length != 1 }}</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Description</th>
+              <th>Category</th>
+              <th class="right">Amount</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if expenses %}
+              {% for e in expenses %}
+                <tr>
+                  <td class="date-cell">{{ e.date.strftime('%d %b %Y') if e.date else '' }}</td>
+                  <td class="desc">{{ e.description }}</td>
+                  <td>
+                    <span class="pill pill-{{ e.category }}">{{ e.category }}</span>
+                  </td>
+                  <td class="amount">${{ '%.2f'|format(e.amount) }}</td>
+                  <td class="action">
+                    <form method="post" action="{{ url_for('delete', expense_id=e.id) }}"
+                          onsubmit="return confirm('Delete this expense?');">
+                      <button type="submit" class="del-btn">Delete</button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="5">
+                  <div class="empty-state">
+                    <span class="empty-icon">🧾</span>
+                    <p class="empty-text">No expenses yet — add your first one above.</p>
+                  </div>
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-grid fade-up delay-3">
+      <div class="card card-pad">
+        <div class="sec-heading">
+          <span class="sec-bar" style="background:linear-gradient(180deg,#f59e0b,#ec4899);"></span>
+          By Category
+        </div>
+        <p style="font-size:0.75rem;color:#334155;margin-top:-8px;margin-bottom:16px;">Spending breakdown</p>
+        {% if cat_labels %}
+          <canvas id="catChart" height="230"></canvas>
+        {% else %}
+          <div class="empty-state"><span class="empty-icon">📊</span><p class="empty-text">No data yet.</p></div>
+        {% endif %}
+      </div>
+      <div class="card card-pad">
+        <div class="sec-heading">
+          <span class="sec-bar" style="background:linear-gradient(180deg,#06b6d4,#8b5cf6);"></span>
+          Spending Over Time
+        </h3>
+        <p style="font-size:0.75rem;color:#334155;margin-top:-8px;margin-bottom:16px;">Daily trend</p>
+        {% if day_labels %}
+          <canvas id="dayChart" height="230"></canvas>
+        {% else %}
+          <div class="empty-state"><span class="empty-icon">📈</span><p class="empty-text">No data yet.</p></div>
+        {% endif %}
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const PALETTE = ["#8b5cf6","#ec4899","#06b6d4","#f59e0b","#10b981","#f97316","#6366f1","#4ade80"];
+  Chart.defaults.font.family = "'Space Grotesk', sans-serif";
+
+  // Doughnut
+  const catLabels = {{ cat_labels | tojson | safe }};
+  const catValues = {{ cat_values | tojson | safe }};
+  if (catLabels.length) {
+    new Chart(document.getElementById("catChart"), {
+      type: "doughnut",
+      data: {
+        labels: catLabels,
+        datasets: [{
+          data: catValues,
+          backgroundColor: PALETTE.slice(0, catLabels.length),
+          borderWidth: 3,
+          borderColor: "#13131f",
+          hoverOffset: 10,
+        }]
+      },
+      options: {
+        cutout: "70%",
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: { color: "#64748b", padding: 16, usePointStyle: true, pointStyleWidth: 8, font: { size: 11 } }
+          },
+          tooltip: {
+            backgroundColor: "#0f0f1a",
+            borderColor: "rgba(139,92,246,0.3)",
+            borderWidth: 1,
+            titleColor: "#e2e8f0",
+            bodyColor: "#94a3b8",
+            padding: 12,
+            callbacks: { label: ctx => `  $${ctx.parsed.toFixed(2)}` }
+          }
+        }
+      }
+    });
+  }
+
+  // Line
+  const dayLabels = {{ day_labels | tojson | safe }};
+  const dayValues = {{ day_values | tojson | safe }};
+  if (dayLabels.length) {
+    new Chart(document.getElementById("dayChart"), {
+      type: "line",
+      data: {
+        labels: dayLabels,
+        datasets: [{
+          label: "Daily Spending ($)",
+          data: dayValues,
+          borderColor: "#8b5cf6",
+          backgroundColor: function(ctx) {
+            const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 260);
+            g.addColorStop(0, "rgba(139,92,246,0.3)");
+            g.addColorStop(1, "rgba(139,92,246,0.01)");
+            return g;
+          },
+          fill: true,
+          tension: 0.45,
+          pointBackgroundColor: "#8b5cf6",
+          pointBorderColor: "#13131f",
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 8,
+        }]
+      },
+      options: {
+        scales: {
+          x: {
+            ticks: { color: "#334155", font: { size: 11 } },
+            grid: { color: "rgba(255,255,255,0.03)" },
+            border: { color: "rgba(255,255,255,0.05)" }
+          },
+          y: {
+            ticks: { color: "#334155", font: { size: 11 }, callback: v => "$" + v },
+            grid: { color: "rgba(255,255,255,0.03)" },
+            border: { color: "rgba(255,255,255,0.05)" },
+            beginAtZero: true
+          }
+        },
+        plugins: {
+          legend: { labels: { color: "#64748b", usePointStyle: true, pointStyleWidth: 8, font: { size: 11 } } },
+          tooltip: {
+            backgroundColor: "#0f0f1a",
+            borderColor: "rgba(139,92,246,0.3)",
+            borderWidth: 1,
+            titleColor: "#e2e8f0",
+            bodyColor: "#94a3b8",
+            padding: 12,
+            callbacks: { label: ctx => `  $${ctx.parsed.y.toFixed(2)}` }
+          }
+        }
+      }
+    });
+  }
+</script>
+
+</body>
+</html>
