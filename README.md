@@ -166,8 +166,8 @@ flask-sqlalchemy>=3.1
 
 ## 👤 Author
 
-**Your Name**
-- GitHub: [@your-username](https://github.com/your-username)
+**Kumar Sanu**
+- GitHub: [meSanu197](https://github.com/meSanu197)
 
 ---
 
